@@ -36,8 +36,8 @@ html,body{
   align-items:flex-end;
 }
 .elevator{
-  height:103px;
-  width:103px;
+  height:110px;
+  width:110px;
   background-image:url(../images/elv.png);
   background-size:cover;
 }
