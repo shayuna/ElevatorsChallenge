@@ -77,23 +77,18 @@ Elevator.prototype.create = function(eParent){
 }
 Elevator.prototype.addOrder = function(iFloorNum){
     this.arOrders.push(iFloorNum);
-    console.log("order was made to floor number - "+iFloorNum);
     }
 Elevator.prototype.recalcState = function(){
     if (this.iDelaySteps>0){
         this.iDelaySteps--;
-        console.log ("in delay state in floor num - "+this.iCurrentFloor);
     }
     else if (this.iCurrentFloor===this.arOrders[0]){
         this.oFloorsManager.arFloors[this.iCurrentFloor].orderState=OrderState.NOT_ORDERED;
         this.arOrders.splice(0,1);
         this.iDelaySteps=4;
-        console.log ("reached floor no - "+this.iCurrentFloor);
         this.direction=Directions.NONE;
         this.oFloorsManager.arFloors[this.iCurrentFloor].eFloor.querySelector(".elevatorController").classList.remove("highlight");
         this.dingDong();
-        //should make a sound
-        //should stay in floor. how can we accomplish that ?
     }
     else if (this.arOrders.length>0){
         if (this.direction===Directions.NONE)this.oElevatorMovementCoordinator.move(this.iCurrentFloor,this.arOrders[0]);
@@ -131,7 +126,6 @@ ElevatorsOrchestrator.prototype.addOrder = function(iFloorNum){
         }
     }
     iStepsRemaining=oMVP.calcStepsToFloor(iFloorNum);
-    console.log ("steps to floor - "+oMVP.calcStepsToFloor(iFloorNum));
     oMVP.addOrder(iFloorNum);
     return iStepsRemaining;
 }
@@ -208,7 +202,9 @@ function Building(iFloorsNum,iElevatorsNum){
     this.init(iFloorsNum,iElevatorsNum);
 }
 Building.prototype.coordinateElevators = function(){
-    this.oElevatorsOrchestrator.orchestrate();
+    window.setInterval(()=>{
+        this.oElevatorsOrchestrator.orchestrate();
+    },500);
 }
 Building.prototype.create = function(){
     const eBuilding=document.createElement("div"),
@@ -241,10 +237,8 @@ const oCity = {
         this.arBuildings.push(new Building(iFloorsNum,iElevatorsNum));
     },
     dayBreak(){
-        window.setInterval(()=>{
-            for (let oBuilding of this.arBuildings){
-                oBuilding.coordinateElevators();
-            }
-        },500)
+        for (let oBuilding of this.arBuildings){
+            oBuilding.coordinateElevators();
+        }
     }
 }
