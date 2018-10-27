@@ -67,6 +67,8 @@ html,body{
   background:white;
   border:1px solid black;
   position:absolute;
+  font-size:1em;
+  font-family: fantasy;
 }
 .elevatorController.highlight{
   color:green;
