@@ -1,9 +1,4 @@
 function onLoad(){
-/*
-    var style=document.documentElement.style;
-    style.setProperty("--tt","-500px");
-    document.getElementsByClassName("elevator")[0].classList.add("myMove");
-*/
     oCity.addBuilding(6,3);
     oCity.addBuilding(3,1);
     oCity.dayBreak();
@@ -18,13 +13,16 @@ const OrderState = {
     ORDERED_NOT_ASSIGNED:2,
     ORDERED_AND_ASSIGNED:3
 }
+const Global = {
+    SECONDS_PER_FLOOR:0.5
+}
 function ElevatorMovementCoordinator(eElevator){
     this.iFrom=0;
     this.iTo=0;
     this.iFramesPerSecond=60;
     this.iFramesPerSecondInterval=this.iFramesPerSecond/1000;
     this.iFloorHeight=110;
-    this.iNumOfSecondsBetweenAdjacentFloors=0.5;
+    this.iNumOfSecondsBetweenAdjacentFloors=Global.SECONDS_PER_FLOOR;
     this.iTotalNumOfSeconds=0;
     this.iStartTimeStamp=null;
     this.iLastTimeStamp=null;
@@ -62,7 +60,14 @@ ElevatorMovementCoordinator.prototype.startAnimating=function(){
 		this.eElevator.style.top=parseFloat(this.eElevator.style.top)+this.iDistanceOnEachIteration+"px";
     }
 }
-
+Elevator.prototype.calcStepsToFloor = function(iFloorNum){
+    let iSteps=0,iCurrentFloor=this.iCurrentFloor;
+    for (let iOrder of this.arOrders){ 
+        iSteps+=Math.abs(iOrder-iCurrentFloor)+4;
+        iCurrentFloor=iOrder;
+    }
+    return iSteps+this.iDelaySteps+Math.abs(iFloorNum-iCurrentFloor);
+}
 Elevator.prototype.create = function(eParent){
     const eElevator=document.createElement("div");
     eElevator.classList.add("elevator");
@@ -75,14 +80,14 @@ Elevator.prototype.addOrder = function(iFloorNum){
     console.log("order was made to floor number - "+iFloorNum);
     }
 Elevator.prototype.recalcState = function(){
-    if (this.iDelayState>0){
-        this.iDelayState--;
+    if (this.iDelaySteps>0){
+        this.iDelaySteps--;
         console.log ("in delay state in floor num - "+this.iCurrentFloor);
     }
     else if (this.iCurrentFloor===this.arOrders[0]){
         this.oFloorsManager.arFloors[this.arOrders[0]].orderState=OrderState.NOT_ORDERED;
         this.arOrders.splice(0,1);
-        this.iDelayState=4;
+        this.iDelaySteps=4;
         console.log ("reached floor no - "+this.iCurrentFloor);
         this.direction=Directions.NONE;
         
@@ -101,7 +106,7 @@ function Elevator(oFloorsManager){
     this.iCurrentFloor=0;
     this.eElevator=null;
     this.arOrders=[];
-    this.iDelayState=0;
+    this.iDelaySteps=0;
     this.oFloorsManager=oFloorsManager;
     this.oElevatorMovementCoordinator= null;
 }
@@ -114,7 +119,17 @@ ElevatorsOrchestrator.prototype.addOrder = function(iFloorNum){
     //here you should write a perfect algorithm to find the most 
     // efficient (how i hat this word)
     // elevator. for now, i just choose the first victim.
-    this.arElevators[0].addOrder(iFloorNum);
+    let oMVP = null,iStepsRemaining=0;
+
+    for (let oElevator of this.arElevators){
+        if (!oMVP || oMVP.calcStepsToFloor(iFloorNum)>oElevator.calcStepsToFloor(iFloorNum)){
+            oMVP=oElevator;
+        }
+    }
+    iStepsRemaining=oMVP.calcStepsToFloor(iFloorNum);
+    console.log ("steps to floor - "+oMVP.calcStepsToFloor(iFloorNum));
+    oMVP.addOrder(iFloorNum);
+    return iStepsRemaining;
 }
 ElevatorsOrchestrator.prototype.create = function(oFloorsManager,eFloors){
     for (let jj=0;jj<this.iElevatorsNum;jj++){
@@ -141,21 +156,36 @@ FloorsManager.prototype.create = function(oElevatorsOrchestrator,eFloors){
 
 Floor.prototype.create = function(eParent){
     const eFloor=document.createElement("div"),eController=document.createElement("button");
+    const eRemainingTimeCounter = document.createElement("div");
     eFloor.classList.add("floor");
     eController.classList.add("metal","linear");
+    eRemainingTimeCounter.classList.add("remainingTimeCounter");
     eController.innerText=this.iFloorNum;
     eFloor.appendChild(eController);
-    if (eParent.childNodes.length===0){
+    eFloor.appendChild(eRemainingTimeCounter);
+    if (eParent.children.length===0){
         eParent.appendChild(eFloor);
     }else{
-        eParent.insertBefore(eFloor,eParent.childNodes[0]);
+        eParent.insertBefore(eFloor,eParent.children[0]);
     }
     this.eFloor=eFloor;
 
     eController.addEventListener("click",e=>{
         if (this.orderState===OrderState.NOT_ORDERED){
             this.orderState=OrderState.ORDERED_NOT_ASSIGNED;
-            this.oElevatorsOrchestrator.addOrder(this.iFloorNum);
+            this.iSecRemaining=this.oElevatorsOrchestrator.addOrder(this.iFloorNum)*Global.SECONDS_PER_FLOOR;
+            const fShowRemainingSec = ()=>{
+                if (this.iSecRemaining>0){
+                    this.eFloor.querySelector(".remainingTimeCounter").classList.remove("hideMe");
+                    this.eFloor.querySelector(".remainingTimeCounter").innerText=this.iSecRemaining;
+                    this.iSecRemaining--;
+                    window.setTimeout(fShowRemainingSec,1000);
+                }
+                else{
+                    this.eFloor.querySelector(".remainingTimeCounter").classList.add("hideMe");
+                }
+            } 
+            window.setTimeout(fShowRemainingSec,0);
         }
     })
 }
@@ -164,6 +194,7 @@ function Floor(iFloorNum,oElevatorsOrchestrator){
     this.orderState=OrderState.NOT_ORDERED;
     this.iFloorNum=iFloorNum;
     this.oElevatorsOrchestrator=oElevatorsOrchestrator;
+    this.iSecRemaining=0;
 }
 function Building(iFloorsNum,iElevatorsNum){
     this.eBuilding=null;
