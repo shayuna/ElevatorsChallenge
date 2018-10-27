@@ -85,12 +85,13 @@ Elevator.prototype.recalcState = function(){
         console.log ("in delay state in floor num - "+this.iCurrentFloor);
     }
     else if (this.iCurrentFloor===this.arOrders[0]){
-        this.oFloorsManager.arFloors[this.arOrders[0]].orderState=OrderState.NOT_ORDERED;
+        this.oFloorsManager.arFloors[this.iCurrentFloor].orderState=OrderState.NOT_ORDERED;
         this.arOrders.splice(0,1);
         this.iDelaySteps=4;
         console.log ("reached floor no - "+this.iCurrentFloor);
         this.direction=Directions.NONE;
-        
+        this.oFloorsManager.arFloors[this.iCurrentFloor].eFloor.querySelector(".elevatorController").classList.remove("highlight");
+        this.dingDong();
         //should make a sound
         //should stay in floor. how can we accomplish that ?
     }
@@ -100,6 +101,9 @@ Elevator.prototype.recalcState = function(){
         this.direction=this.arOrders[0]-this.iCurrentFloor>0 ? Directions.UP : Directions.DOWN;
         this.iCurrentFloor+=this.direction===Directions.UP ? 1 : -1;
     }
+}
+Elevator.prototype.dingDong = function(){
+    this.eElevator.closest(".elevators").querySelector(".audioControl").play();
 }
 function Elevator(oFloorsManager){
     this.direction=Directions.NONE;
@@ -158,8 +162,8 @@ Floor.prototype.create = function(eParent){
     const eFloor=document.createElement("div"),eController=document.createElement("button");
     const eRemainingTimeCounter = document.createElement("div");
     eFloor.classList.add("floor");
-    eController.classList.add("metal","linear");
-    eRemainingTimeCounter.classList.add("remainingTimeCounter");
+    eController.classList.add("metal","linear","elevatorController");
+    eRemainingTimeCounter.classList.add("remainingTimeCounter","invisibleMe");
     eController.innerText=this.iFloorNum;
     eFloor.appendChild(eController);
     eFloor.appendChild(eRemainingTimeCounter);
@@ -172,17 +176,18 @@ Floor.prototype.create = function(eParent){
 
     eController.addEventListener("click",e=>{
         if (this.orderState===OrderState.NOT_ORDERED){
+            this.eFloor.querySelector(".elevatorController").classList.add("highlight");
             this.orderState=OrderState.ORDERED_NOT_ASSIGNED;
             this.iSecRemaining=this.oElevatorsOrchestrator.addOrder(this.iFloorNum)*Global.SECONDS_PER_FLOOR;
             const fShowRemainingSec = ()=>{
                 if (this.iSecRemaining>0){
-                    this.eFloor.querySelector(".remainingTimeCounter").classList.remove("hideMe");
+                    this.eFloor.querySelector(".remainingTimeCounter").classList.remove("invisibleMe");
                     this.eFloor.querySelector(".remainingTimeCounter").innerText=this.iSecRemaining;
                     this.iSecRemaining--;
                     window.setTimeout(fShowRemainingSec,1000);
                 }
                 else{
-                    this.eFloor.querySelector(".remainingTimeCounter").classList.add("hideMe");
+                    this.eFloor.querySelector(".remainingTimeCounter").classList.add("invisibleMe");
                 }
             } 
             window.setTimeout(fShowRemainingSec,0);
@@ -208,10 +213,16 @@ Building.prototype.coordinateElevators = function(){
 Building.prototype.create = function(){
     const eBuilding=document.createElement("div"),
         eFloors=document.createElement("div"),
-        eElevators=document.createElement("div");
+        eElevators=document.createElement("div"),
+        eAudio=document.createElement("audio"),
+        eSource=document.createElement("source");
     eBuilding.classList.add("building");
     eFloors.classList.add("floors");
     eElevators.classList.add("elevators");
+    eAudio.classList.add("audioControl");
+    eSource.setAttribute("src","./audio/ding.mp3");
+    eAudio.appendChild(eSource);
+    eElevators.appendChild(eAudio);
     eBuilding.appendChild(eFloors);
     eBuilding.appendChild(eElevators);
     document.getElementById("eCityArea").appendChild(eBuilding);
@@ -219,6 +230,7 @@ Building.prototype.create = function(){
     
     this.oFloorsManager.create(this.oElevatorsOrchestrator,eFloors);
     this.oElevatorsOrchestrator.create(this.oFloorsManager,eElevators)
+
 }
 Building.prototype.init = function(iFloorsNum){
     this.create();

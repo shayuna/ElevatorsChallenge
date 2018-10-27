@@ -66,6 +66,10 @@ html,body{
   padding:10px;
   background:white;
   border:1px solid black;
+  position:absolute;
+}
+.elevatorController.highlight{
+  color:green;
 }
 .metal {
     position: relative;
@@ -165,7 +169,7 @@ html,body{
                 hsla(210,80%,95%, 0) 0 5px 6px 4px; /* outer HL */
   }
   /* helper classes - start */
-    .hideMe{
-      display:none;
+    .invisibleMe{
+      visibility:hidden;
     }
   /* helper classes - end */
